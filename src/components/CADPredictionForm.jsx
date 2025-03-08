@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HeartPulse } from 'lucide-react';
+import RecommendationDisplay from './RecommendationDisplay';
 
 const CADPredictionForm = () => {
   const [formData, setFormData] = useState({
@@ -16,11 +17,21 @@ const CADPredictionForm = () => {
     oldpeak: '',
     slope: '0',
     major_vessels: '0',
+    patient_name: '',
+    patient_email: '',
   });
 
   const [predictionResult, setPredictionResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [token, setToken] = useState('');
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -36,14 +47,23 @@ const CADPredictionForm = () => {
     setError(null);
     setPredictionResult(null);
 
+    if (!token) {
+      setError('You must be logged in to make predictions');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:8000/predict/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`,
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
+
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -78,7 +98,38 @@ const CADPredictionForm = () => {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {[ 
+          {/* Patient Information */}
+          <div>
+            <label htmlFor="patient_name" className="block text-sm font-medium text-gray-300">
+              Patient Name
+            </label>
+            <input
+              type="text"
+              id="patient_name"
+              name="patient_name"
+              value={formData.patient_name}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="patient_email" className="block text-sm font-medium text-gray-300">
+              Patient Email
+            </label>
+            <input
+              type="email"
+              id="patient_email"
+              name="patient_email"
+              value={formData.patient_email}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              required
+            />
+          </div>
+
+          {/* Existing form fields */}
+          {[
             { name: 'age', label: 'Age', type: 'number', min: 0, max: 120 },
             { name: 'sex', label: 'Sex', type: 'select', options: { '0': 'Female', '1': 'Male' } },
             { name: 'chest_pain', label: 'Chest Pain Type', type: 'select', options: { '0': 'Typical Angina', '1': 'Atypical Angina', '2': 'Non-Anginal Pain', '3': 'Asymptomatic' } },
@@ -147,50 +198,25 @@ const CADPredictionForm = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 p-4 bg-green-900 border border-green-700 text-green-300 rounded"
+            className="mt-4 p-4 bg-gray-800 border border-gray-700 rounded"
           >
-            <h3 className="font-bold text-lg mb-2">Prediction Result</h3>
-            <p>Risk Level: {predictionResult.risk_level}</p>
-            {predictionResult.risk_probability && (
-              <p>Risk Probability: {predictionResult.risk_probability}%</p>
-            )}
-            {predictionResult.prediction !== undefined && (
-              <p>Prediction: {predictionResult.prediction === 1 ? 'High Risk' : 'Low Risk'}</p>
-            )}
-
-            <div className="mt-4">
-              {predictionResult.prediction === 1 ? (
-                <div>
-                  <p className="font-bold text-red-400">Recommendations:</p>
-                  <ul className="list-disc list-inside">
-                    <li><strong>Consultation with Cardiologist:</strong> Schedule an appointment with a cardiologist to evaluate the patient's cardiovascular health.</li>
-                    <li><strong>Further Diagnostic Tests:</strong> Consider ordering additional diagnostic tests, such as a stress test, echocardiogram, or coronary angiography, to assess the presence of coronary artery disease (CAD).</li>
-                    <li><strong>Medications:</strong> Based on the results, consider initiating pharmacological therapy, including statins, antihypertensive medications, and possibly anticoagulants if necessary.</li>
-                    <li><strong>Lifestyle Changes:</strong> Advise the patient on dietary modifications, weight management, regular physical activity (such as 30 minutes of moderate exercise, 5 days a week), and smoking cessation.</li>
-                    <li><strong>Monitor Risk Factors:</strong> Keep track of the patient's blood pressure, cholesterol levels, and blood sugar. Consider regular monitoring and adjustments to medications based on results.</li>
-                    <li><strong>Manage Co-morbidities:</strong> Address other risk factors like diabetes, obesity, or hypertension to reduce overall cardiovascular risk.</li>
-                    <li><strong>Emergency Plan:</strong> In case of any chest pain, dyspnea, or other concerning symptoms, advise the patient to seek immediate medical help.</li>
-                  </ul>
-                </div>
-              ) : (
-                <div>
-                  <p className="font-bold text-green-400">Recommendations:</p>
-                  <ul className="list-disc list-inside">
-                    <li><strong>Maintain Healthy Lifestyle:</strong> Continue with a balanced diet, regular physical activity, and weight management to keep your heart healthy.</li>
-                    <li><strong>Regular Check-ups:</strong> Schedule annual or bi-annual visits to monitor cholesterol, blood pressure, and blood sugar levels.</li>
-                    <li><strong>Exercise:</strong> Continue regular cardiovascular exercises such as walking, jogging, or swimming for at least 150 minutes per week.</li>
-                    <li><strong>Preventive Measures:</strong> Avoid smoking, limit alcohol consumption, and manage stress levels through techniques like meditation or yoga.</li>
-                    <li><strong>Consider Screening:</strong> For patients over 40 or those with family history, consider periodic screening for CAD even if the current risk level is low.</li>
-                  </ul>
-                </div>
-              )}
-            </div>
-
+            <h3 className="font-bold text-lg mb-4 text-white">Prediction Result</h3>
+            <p
+              className={`text-lg font-semibold mb-4 ${
+                predictionResult.prediction === 1 ? 'text-red-400' : 'text-green-400'
+              }`}
+            >
+              Risk Level: {predictionResult.risk_level}
+            </p>
+            <RecommendationDisplay
+              recommendations={predictionResult.recommendations}
+              healthMetrics={predictionResult.risk_factors}
+            />
           </motion.div>
         )}
       </motion.div>
     </div>
   );
 };
+
 export default CADPredictionForm;
-              

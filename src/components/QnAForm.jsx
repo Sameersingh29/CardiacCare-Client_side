@@ -1,14 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Stethoscope, HeartPulse } from 'lucide-react';
 import CADPredictionForm from './CADPredictionForm';
 import CADPatient from './CADPatient';
+import TopBar from './TopBar';
 
 const QnAForm = () => {
   const [userType, setUserType] = useState(null);
+  const [loggedInUserType, setLoggedInUserType] = useState(null);
+
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    if (storedUser) {
+      setLoggedInUserType(storedUser.userType);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Top Bar */}
+      <TopBar />
+
       {/* Animated heart in the background */}
       <motion.div
         className="absolute inset-0 flex justify-center items-center pointer-events-none"
@@ -34,26 +46,33 @@ const QnAForm = () => {
         {!userType ? (
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-8 text-white tracking-tight">Who Are You?</h2>
-            <p className='mb-8 text-white tracking-tight'>Let's Predict your heart condition !</p>
+            <p className='mb-8 text-white tracking-tight'>Let's Predict your heart condition!</p>
             <div className="space-y-6">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setUserType('clinician')}
-                className="w-full flex items-center justify-center bg-blue-600 text-white py-4 px-6 rounded-xl hover:bg-blue-700 transition-colors space-x-3"
-              >
-                <Stethoscope className="w-6 h-6" />
-                <span>I am a Clinician</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setUserType('patient')}
-                className="w-full flex items-center justify-center bg-green-600 text-white py-4 px-6 rounded-xl hover:bg-green-700 transition-colors space-x-3"
-              >
-                <HeartPulse className="w-6 h-6" />
-                <span>I am a Patient</span>
-              </motion.button>
+              {/* Show "I am a Clinician" button only if the user is NOT a patient */}
+              {loggedInUserType !== 'patient' && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setUserType('clinician')}
+                  className="w-full flex items-center justify-center bg-blue-600 text-white py-4 px-6 rounded-xl hover:bg-blue-700 transition-colors space-x-3"
+                >
+                  <Stethoscope className="w-6 h-6" />
+                  <span>I am a Clinician</span>
+                </motion.button>
+              )}
+
+              {/* Show "I am a Patient" button only if the user is NOT a clinician */}
+              {loggedInUserType !== 'clinician' && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setUserType('patient')}
+                  className="w-full flex items-center justify-center bg-green-600 text-white py-4 px-6 rounded-xl hover:bg-green-700 transition-colors space-x-3"
+                >
+                  <HeartPulse className="w-6 h-6" />
+                  <span>I am a Patient</span>
+                </motion.button>
+              )}
             </div>
           </div>
         ) : (
